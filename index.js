@@ -1,79 +1,72 @@
 const fs = require('fs');
-const xml2js = require('xml2js');
 const { execSync } = require('child_process');
 const path = require('path');
 
-// Чтение конфигурации из XML
-async function readConfig(filePath) {
-  const xmlData = fs.readFileSync(filePath, 'utf-8');
-  const parsedData = await xml2js.parseStringPromise(xmlData);
-  return parsedData.configuration;
-}
-
-// Получение зависимостей пакета рекурсивно с учётом глубины
-function getDependencies(packageName, maxDepth, currentDepth = 0) {
-  if (currentDepth >= maxDepth) return {};
-
+// Функция для получения зависимостей с использованием npm ls
+const getDependencies = (packageName, depth) => {
+  const command = `npm ls ${packageName} --depth=${depth} --json`;
   try {
-    const dependencies = execSync(`npm view ${packageName} dependencies --json`, { encoding: 'utf-8' });
-    const depJson = JSON.parse(dependencies);
-    
-    const result = {};
-    for (let dep in depJson) {
-      result[dep] = getDependencies(dep, maxDepth, currentDepth + 1);
-    }
-    return result;
+    const result = execSync(command);
+    return JSON.parse(result); // Преобразуем JSON-вывод в объект
   } catch (error) {
-    console.error(`Ошибка получения зависимостей для ${packageName}:`, error.message);
-    return {};
+    console.error(`Ошибка получения зависимостей: ${error.message}`);
+    return null;
   }
-}
+};
 
-// Построение графа в формате Mermaid
-function buildMermaidGraph(dependencies, packageName) {
-  let graph = `graph LR\n    ${packageName}[${packageName}]\n`;
-
-  function addDependencies(depName, deps) {
-    for (let dep in deps) {
-      graph += `    ${depName} --> ${dep}[${dep}]\n`;
-      addDependencies(dep, deps[dep]);
+// Функция для создания графа Mermaid из зависимостей
+const generateMermaidGraph = (dependencies, parent = 'root') => {
+  let graph = '';
+  if (dependencies && dependencies.dependencies) {
+    for (const depName in dependencies.dependencies) {
+      const dep = dependencies.dependencies[depName];
+      graph += `${parent}-->${depName}\n`; // Добавляем зависимость в граф
+      // Рекурсивно добавляем транзитивные зависимости
+      graph += generateMermaidGraph(dep, depName);
     }
   }
-
-  addDependencies(packageName, dependencies);
   return graph;
-}
+};
 
-// Визуализация графа через внешний инструмент (Mermaid CLI)
-function visualizeGraph(mermaidGraph, visualizerPath) {
-  const graphFilePath = path.join(__dirname, '/tmp/dependencies.mmd');
-  const svgFilePath = path.join(__dirname, '/tmp/dependencies.svg');
-
+// Функция для визуализации графа
+const visualizeGraph = (mermaidGraph) => {
+  // Сохраняем граф в файл
+  const graphFilePath = './graph.mmd';
   fs.writeFileSync(graphFilePath, mermaidGraph);
 
+  // Генерация визуализации с помощью Mermaid CLI
+  const outputFilePath = './graph.svg';
+  const mermaidCmd = `mmdc -i ${graphFilePath} -o ${outputFilePath}`;
+
   try {
-    execSync(`${visualizerPath} ${graphFilePath} -o ${svgFilePath}`);
-    console.log(`Граф сохранён в ${svgFilePath}`);
+    execSync(mermaidCmd);
+    console.log('Граф был успешно сгенерирован! Изображение сохранено как graph.svg');
   } catch (error) {
-    console.error(`Ошибка визуализации графа: ${error.message}`);
+    console.error('Ошибка при генерации графа:', error.message);
+  } finally {
+    // Удаляем временный файл графа
+    fs.unlinkSync(graphFilePath);
   }
-}
+};
 
-// Основная функция для визуализации зависимостей
-async function visualizeDependencies(configPath) {
-  const config = await readConfig(configPath);
-  const { 'path-to-visualizer': visualizerPath, 'package-name': packageName, 'max-depth': maxDepth } = config;
+// Основная функция для анализа зависимостей и визуализации
+const createDependencyGraph = (packageName, maxDepth) => {
+  console.log(`Анализируем зависимости для пакета: ${packageName}`);
+  const dependencies = getDependencies(packageName, maxDepth);
 
-  console.log(`Анализируем пакет: ${packageName}`);
-  console.log(`Максимальная глубина зависимостей: ${maxDepth}`);
-  
-  const dependencies = getDependencies(packageName, parseInt(maxDepth));
-  const mermaidGraph = buildMermaidGraph(dependencies, packageName);
+  if (dependencies) {
+    console.log('Генерируем Mermaid-граф...');
+    const mermaidGraph = `graph TD\n${generateMermaidGraph(dependencies)}`;
+    console.log('Граф в формате Mermaid:\n', mermaidGraph);
 
-  // Визуализируем граф
-  visualizeGraph(mermaidGraph, visualizerPath);
-}
+    visualizeGraph(mermaidGraph);
+  } else {
+    console.log('Не удалось получить зависимости.');
+  }
+};
 
-// Вызов функции с конфигурационным файлом
-const configFilePath = 'config.xml'; // Путь к вашему конфигурационному файлу
-visualizeDependencies(configFilePath);
+// Пример конфигурации
+const packageName = 'lodash'; // Укажите имя пакета, который хотите анализировать
+const maxDepth = 3; // Укажите максимальную глубину
+
+createDependencyGraph(packageName, maxDepth);

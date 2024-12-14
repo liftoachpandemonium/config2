@@ -1,0 +1,6 @@
+<config>
+  <visualizerPath>C:\Users\nesto\AppData\Roaming\npm\mmdc</visualizerPath>
+  <packageName>lodash</packageName>  <!-- Используйте реальное имя пакета, например 'lodash' -->
+  <maxDepth>3</maxDepth>
+  <repositoryUrl>https://github.com/lodash/lodash</repositoryUrl>
+</config>
