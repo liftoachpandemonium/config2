@@ -70,3 +70,10 @@ const packageName = 'lodash'; // Укажите имя пакета, котор�
 const maxDepth = 3; // Укажите максимальную глубину
 
 createDependencyGraph(packageName, maxDepth);
+
+module.exports = {
+    generateMermaidGraph,
+    getDependencies,
+    visualizeGraph,
+    createDependencyGraph,
+  };
