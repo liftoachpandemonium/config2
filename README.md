@@ -69,7 +69,7 @@
 ## Настройка и запуск проекта
 
 ### Требования
-- nide,hs
+- nide.js
 - Модуль Mermaid
 
 ### Запуск
@@ -77,6 +77,7 @@
 
    ```bash
    npm init
+   npm install -g @mermaid-js/mermaid-cli
    node index.js
 ```
    
