@@ -49,7 +49,7 @@
 - `mermaidGraph` (string): строка графа, генерированная функцией `generateMermaidGraph`.
 
 **Действия**:
-- Сохраняет граф в файл `.mmd`.
+- Сохраняет граф в файл `.md`.
 - Генерирует SVG-файл с помощью инструмента `mmdc` (CLI для Mermaid).
 
 ### 4. `createDependencyGraph(packageName, maxDepth)`
@@ -69,7 +69,7 @@
 ## Настройка и запуск проекта
 
 ### Требования
-- nide.js
+- node.js
 - Модуль Mermaid
 
 ### Запуск
